@@ -2,10 +2,10 @@
 -- ============================================================
 -- SMART Aqua Pond
 -- MySQL Database Schema
+-- Improved Schema Organization
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS smart_aqua_pond;
-
 USE smart_aqua_pond;
 
 -- ============================================================
@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS alerts (
     acknowledged BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
+    INDEX idx_alerts_created_at (created_at),
     INDEX idx_alerts_acknowledged_created (acknowledged, created_at)
 );
 
@@ -54,7 +55,10 @@ CREATE TABLE IF NOT EXISTS feeding_schedules (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
 
-    INDEX idx_feeding_schedules_enabled_time (enabled, feeding_time)
+    INDEX idx_feeding_schedules_enabled_time (enabled, feeding_time),
+
+    CONSTRAINT chk_feeding_schedules_amount
+        CHECK (amount IS NULL OR amount >= 0)
 );
 
 -- ============================================================
@@ -75,7 +79,10 @@ CREATE TABLE IF NOT EXISTS feeding_history (
     CONSTRAINT fk_feeding_history_schedule
         FOREIGN KEY (feeding_schedule_id)
         REFERENCES feeding_schedules(id)
-        ON DELETE SET NULL
+        ON DELETE SET NULL,
+
+    CONSTRAINT chk_feeding_history_amount
+        CHECK (amount IS NULL OR amount >= 0)
 );
 
 -- ============================================================
@@ -120,7 +127,22 @@ CREATE TABLE IF NOT EXISTS system_settings (
     auto_water_change_enabled BOOLEAN NOT NULL DEFAULT FALSE,
 
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_system_temperature_range
+        CHECK (temperature_min <= temperature_max),
+
+    CONSTRAINT chk_system_ph_range
+        CHECK (ph_min <= ph_max),
+
+    CONSTRAINT chk_system_dissolved_oxygen
+        CHECK (dissolved_oxygen_min >= 0),
+
+    CONSTRAINT chk_system_turbidity
+        CHECK (turbidity_max >= 0),
+
+    CONSTRAINT chk_system_water_level
+        CHECK (water_level_min >= 0)
 );
 
 -- ============================================================
@@ -135,8 +157,15 @@ CREATE TABLE IF NOT EXISTS fish_behavior_logs (
     description TEXT NULL,
     detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
+    INDEX idx_fish_behavior_detected_at (detected_at),
     INDEX idx_fish_behavior_status_detected
-        (activity_status, detected_at)
+        (activity_status, detected_at),
+
+    CONSTRAINT chk_fish_behavior_confidence
+        CHECK (
+            confidence_score IS NULL
+            OR (confidence_score >= 0 AND confidence_score <= 100)
+        )
 );
 
 -- ============================================================
