@@ -1,10 +1,11 @@
+
 -- ============================================================
 -- SMART Aqua Pond
 -- MySQL Database Schema
+-- Improved Schema Organization
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS smart_aqua_pond;
-
 USE smart_aqua_pond;
 
 -- ============================================================
@@ -18,7 +19,9 @@ CREATE TABLE IF NOT EXISTS water_quality_readings (
     dissolved_oxygen DECIMAL(5,2) NULL,
     turbidity DECIMAL(7,2) NULL,
     water_level DECIMAL(5,2) NULL,
-    recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_water_quality_recorded_at (recorded_at)
 );
 
 -- ============================================================
@@ -32,7 +35,10 @@ CREATE TABLE IF NOT EXISTS alerts (
     severity ENUM('Critical', 'Warning', 'Info') NOT NULL,
     category VARCHAR(50) NOT NULL,
     acknowledged BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_alerts_created_at (created_at),
+    INDEX idx_alerts_acknowledged_created (acknowledged, created_at)
 );
 
 -- ============================================================
@@ -47,7 +53,10 @@ CREATE TABLE IF NOT EXISTS feeding_schedules (
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_feeding_schedules_amount
+        CHECK (amount IS NULL OR amount >= 0)
 );
 
 -- ============================================================
@@ -65,7 +74,10 @@ CREATE TABLE IF NOT EXISTS feeding_history (
     CONSTRAINT fk_feeding_history_schedule
         FOREIGN KEY (feeding_schedule_id)
         REFERENCES feeding_schedules(id)
-        ON DELETE SET NULL
+        ON DELETE SET NULL,
+
+    INDEX idx_feeding_history_schedule_fed
+        (feeding_schedule_id, fed_at)
 );
 
 -- ============================================================
@@ -79,7 +91,9 @@ CREATE TABLE IF NOT EXISTS equipment_logs (
     control_mode ENUM('Automatic', 'Manual') NOT NULL,
     status ENUM('Success', 'Failed') NOT NULL DEFAULT 'Success',
     details TEXT NULL,
-    recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_equipment_logs_recorded_at (recorded_at)
 );
 
 -- ============================================================
@@ -121,7 +135,15 @@ CREATE TABLE IF NOT EXISTS fish_behavior_logs (
     behavior_type VARCHAR(100) NULL,
     confidence_score DECIMAL(5,2) NULL,
     description TEXT NULL,
-    detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_fish_behavior_detected_at (detected_at),
+
+    CONSTRAINT chk_fish_behavior_confidence
+        CHECK (
+            confidence_score IS NULL
+            OR (confidence_score >= 0 AND confidence_score <= 100)
+        )
 );
 
 -- ============================================================
