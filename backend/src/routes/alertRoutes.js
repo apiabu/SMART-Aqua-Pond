@@ -39,13 +39,22 @@ router.post("/", async (req, res) => {
   try {
     const { title, message, severity, category } = req.body;
 
-    if (!title || !message || !severity || !category) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Title, message, severity, and category are required.",
-      });
-    }
+if (
+  typeof title !== "string" ||
+  typeof message !== "string" ||
+  typeof severity !== "string" ||
+  typeof category !== "string" ||
+  !title.trim() ||
+  !message.trim() ||
+  !severity.trim() ||
+  !category.trim()
+) {
+  return res.status(400).json({
+    success: false,
+    message:
+      "Title, message, severity, and category must be non-empty text.",
+  });
+}
 
     const validSeverities = ["Critical", "Warning", "Info"];
 
