@@ -22,7 +22,7 @@ export default async function Home() {
       <main className="flex flex-1 flex-col">
         <Header />
 
-        <div className="flex-1 bg-slate-50 p-8">
+        <div className="flex-1 bg-slate-50 p-4 sm:p-6 lg:p-8">
           {/* =========================
               WATER QUALITY OVERVIEW
           ========================== */}
