@@ -480,9 +480,10 @@ const [
       <main className="flex min-w-0 flex-1 flex-col">
         <Header />
 
-        <div className="flex-1 bg-slate-50 p-5 sm:p-8">
-          {/* WATER QUALITY OVERVIEW */}
-
+        <div className="flex-1 bg-slate-50 p-8">
+          {/* =========================
+              WATER QUALITY OVERVIEW
+          ========================== */}
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-slate-900">
               Water Quality Overview
