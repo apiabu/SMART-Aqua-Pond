@@ -310,6 +310,14 @@ fish_behavior_logs
 
 The database stores monitoring records and prototype system activity used by the dashboard.
 
+`database/schema.sql` creates the existing tables and adds synthetic sample
+records for development. It includes 24 hourly simulated water-quality readings
+and five prototype records in each other operational table. The sample inserts
+are safe to rerun without duplicating their fixed timestamps / feeding times.
+Sensor values are simulated calibrated outputs (temperature in C, dissolved
+oxygen in mg/L, turbidity in NTU, and water level as a percentage); they are not
+live Arduino measurements.
+
 ---
 
 ## Safety and Hardware Notes

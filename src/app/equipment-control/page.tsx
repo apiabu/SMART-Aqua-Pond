@@ -6,7 +6,9 @@ import Header from "@/components/Header";
 import {
   getEquipmentLogs,
   saveEquipmentLog,
+  getAutomaticAerationState,
   type EquipmentLogRecord,
+  type AutomaticAerationStateRecord,
 } from "@/lib/api";
 import {
   Wind,
@@ -79,6 +81,12 @@ export default function EquipmentControlPage() {
     EquipmentLogRecord[]
   >([]);
 
+  const [automaticAeration, setAutomaticAeration] =
+  useState<AutomaticAerationStateRecord | null>(null);
+
+  const [automaticAerationLoading, setAutomaticAerationLoading] =
+  useState(true);
+
   useEffect(() => {
     async function loadEquipmentLogs() {
       try {
@@ -93,7 +101,34 @@ export default function EquipmentControlPage() {
     }
 
     loadEquipmentLogs();
+    
   }, []);
+
+  useEffect(() => {
+  let isMounted = true;
+
+  async function loadAutomaticAeration() {
+    setAutomaticAerationLoading(true);
+    try {
+      const data = await getAutomaticAerationState();
+
+      if (isMounted) {
+        setAutomaticAeration(data);
+      }
+    } catch (error) {
+      console.error(
+        "Failed to load automatic aeration state:",
+        error
+      );
+    }
+  }
+
+  loadAutomaticAeration();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
 
   async function togglePrototype(id: keyof EquipmentState) {
     const equipmentItem = equipment.find(
@@ -226,7 +261,7 @@ export default function EquipmentControlPage() {
 
               <p className="mt-1 text-sm leading-6 text-amber-800">
                 Buttons on this page change the displayed prototype state only.
-                They do not send commands to the Arduino Mega 2560, water pump,
+                They do not send commands to the Arduino UNO R4 Minima controller, water pump,
                 aerator, or fish feeder.
               </p>
             </div>
@@ -288,6 +323,54 @@ export default function EquipmentControlPage() {
               </div>
             </div>
           </div>
+
+          {/* Automatic Aeration Status */}
+<div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+  <div className="flex items-center justify-between gap-4">
+    <div>
+      <h2 className="text-base font-semibold text-slate-900">
+        Automatic Aeration Status
+      </h2>
+
+      <p className="mt-1 text-sm text-slate-500">
+        Saved automatic aeration request from MySQL.
+      </p>
+    </div>
+
+    <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700">
+      Simulation Only
+    </span>
+  </div>
+
+  <div className="mt-5 rounded-lg bg-slate-50 p-4">
+    <p className="text-sm text-slate-600">
+      Requested State:{" "}
+      <span className="font-semibold text-slate-900">
+        {automaticAerationLoading
+          ? "Loading..."
+          : automaticAeration?.requested_state === "ON"
+            ? "ON"
+            : "OFF"}
+      </span>
+    </p>
+
+    <p className="mt-2 text-sm text-slate-600">
+      Last DO Reading:{" "}
+      <span className="font-semibold text-slate-900">
+        {automaticAerationLoading
+  ? "Loading..."
+  : automaticAeration?.last_reading_value != null
+    ? `${automaticAeration.last_reading_value} mg/L`
+    : "Unavailable"}
+      </span>
+    </p>
+
+    <p className="mt-3 text-xs text-slate-500">
+      This is a simulated automatic request, not the physical
+      aerator status.
+    </p>
+  </div>
+</div>
 
           {/* Equipment Controls */}
           <div className="mt-8">
@@ -524,7 +607,7 @@ export default function EquipmentControlPage() {
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Arduino Mega 2560 controller
+              Arduino UNO R4 Minima controller
             </p>
 
             <div className="mt-5 flex items-center gap-3 rounded-lg bg-slate-50 p-4">

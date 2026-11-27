@@ -1,4 +1,27 @@
+
 const API_BASE_URL = "http://127.0.0.1:5000/api";
+
+// ======================================================
+// SHARED API HELPER
+// ======================================================
+
+async function requestJson<T>(
+  path: string,
+  options?: RequestInit
+): Promise<T> {
+  const response = await fetch(
+    `${API_BASE_URL}${path}`,
+    options
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `API request failed: ${path} (${response.status})`
+    );
+  }
+
+  return (await response.json()) as T;
+}
 
 // ======================================================
 // WATER QUALITY
@@ -23,13 +46,10 @@ type WaterQualityResponse = {
 export async function getWaterQualityReadings(): Promise<
   WaterQualityReading[]
 > {
-  const response = await fetch(`${API_BASE_URL}/water-quality`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch water quality readings.");
-  }
-
-  const result: WaterQualityResponse = await response.json();
+  const result = await requestJson<WaterQualityResponse>(
+    "/water-quality",
+    { cache: "no-store" }
+  );
 
   return result.data;
 }
@@ -62,13 +82,10 @@ type AlertsResponse = {
 };
 
 export async function getAlerts(): Promise<AlertRecord[]> {
-  const response = await fetch(`${API_BASE_URL}/alerts`);
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch alerts.");
-  }
-
-  const result: AlertsResponse = await response.json();
+  const result = await requestJson<AlertsResponse>(
+    "/alerts",
+    { cache: "no-store" }
+  );
 
   return result.data;
 }
@@ -76,29 +93,17 @@ export async function getAlerts(): Promise<AlertRecord[]> {
 export async function acknowledgeAlert(
   id: number
 ): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/alerts/${id}/acknowledge`,
-    {
-      method: "PATCH",
-    }
+  await requestJson<unknown>(
+    `/alerts/${id}/acknowledge`,
+    { method: "PATCH" }
   );
-
-  if (!response.ok) {
-    throw new Error("Failed to acknowledge alert.");
-  }
 }
 
 export async function acknowledgeAllAlerts(): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/alerts/acknowledge-all`,
-    {
-      method: "PATCH",
-    }
+  await requestJson<unknown>(
+    "/alerts/acknowledge-all",
+    { method: "PATCH" }
   );
-
-  if (!response.ok) {
-    throw new Error("Failed to acknowledge all alerts.");
-  }
 }
 
 // ======================================================
@@ -145,16 +150,10 @@ type FeedingHistoryResponse = {
 export async function getFeedingSchedule(): Promise<
   FeedingScheduleRecord[]
 > {
-  const response = await fetch(
-    `${API_BASE_URL}/feeding/schedule`
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch feeding schedule.");
-  }
-
-  const result: FeedingScheduleResponse =
-    await response.json();
+  const result =
+    await requestJson<FeedingScheduleResponse>(
+      "/feeding/schedule"
+    );
 
   return result.data;
 }
@@ -162,8 +161,8 @@ export async function getFeedingSchedule(): Promise<
 export async function saveFeedingSchedule(
   schedule: FeedingScheduleInput
 ): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/feeding/schedule`,
+  await requestJson<unknown>(
+    "/feeding/schedule",
     {
       method: "PUT",
       headers: {
@@ -172,38 +171,22 @@ export async function saveFeedingSchedule(
       body: JSON.stringify(schedule),
     }
   );
-
-  if (!response.ok) {
-    throw new Error("Failed to save feeding schedule.");
-  }
 }
 
 export async function resetFeedingSchedule(): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/feeding/schedule`,
-    {
-      method: "DELETE",
-    }
+  await requestJson<unknown>(
+    "/feeding/schedule",
+    { method: "DELETE" }
   );
-
-  if (!response.ok) {
-    throw new Error("Failed to reset feeding schedule.");
-  }
 }
 
 export async function getFeedingHistory(): Promise<
   FeedingHistoryRecord[]
 > {
-  const response = await fetch(
-    `${API_BASE_URL}/feeding/history`
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch feeding history.");
-  }
-
-  const result: FeedingHistoryResponse =
-    await response.json();
+  const result =
+    await requestJson<FeedingHistoryResponse>(
+      "/feeding/history"
+    );
 
   return result.data;
 }
@@ -237,16 +220,10 @@ type EquipmentLogsResponse = {
 export async function getEquipmentLogs(): Promise<
   EquipmentLogRecord[]
 > {
-  const response = await fetch(
-    `${API_BASE_URL}/equipment/logs`
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch equipment logs.");
-  }
-
-  const result: EquipmentLogsResponse =
-    await response.json();
+  const result =
+    await requestJson<EquipmentLogsResponse>(
+      "/equipment/logs"
+    );
 
   return result.data;
 }
@@ -254,8 +231,8 @@ export async function getEquipmentLogs(): Promise<
 export async function saveEquipmentLog(
   log: EquipmentLogInput
 ): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/equipment/logs`,
+  await requestJson<unknown>(
+    "/equipment/logs",
     {
       method: "POST",
       headers: {
@@ -264,12 +241,36 @@ export async function saveEquipmentLog(
       body: JSON.stringify(log),
     }
   );
-
-  if (!response.ok) {
-    throw new Error("Failed to save equipment log.");
-  }
 }
 
+// ======================================================
+// AUTOMATIC AERATION STATE - PROTOTYPE
+// ======================================================
+
+export type AutomaticAerationStateRecord = {
+  id: number;
+  equipment_name: string;
+  requested_state: "ON" | "OFF";
+  last_reading_value: string | null;
+};
+
+type AutomaticAerationStateResponse = {
+  success: boolean;
+  data: AutomaticAerationStateRecord;
+  simulation_only: boolean;
+};
+
+export async function getAutomaticAerationState(): Promise<
+  AutomaticAerationStateRecord
+> {
+  const result =
+    await requestJson<AutomaticAerationStateResponse>(
+      "/equipment/automatic-aeration",
+      { cache: "no-store" }
+    );
+
+  return result.data;
+}
 // ======================================================
 // SYSTEM SETTINGS
 // ======================================================
@@ -316,19 +317,11 @@ type SystemSettingsResponse = {
 export async function getSystemSettings(): Promise<
   SystemSettingsRecord | null
 > {
-  const response = await fetch(
-    `${API_BASE_URL}/settings`,
-    {
-      cache: "no-store",
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch system settings.");
-  }
-
-  const result: SystemSettingsResponse =
-    await response.json();
+  const result =
+    await requestJson<SystemSettingsResponse>(
+      "/settings",
+      { cache: "no-store" }
+    );
 
   return result.data;
 }
@@ -336,8 +329,8 @@ export async function getSystemSettings(): Promise<
 export async function saveSystemSettings(
   settings: SystemSettingsInput
 ): Promise<void> {
-  const response = await fetch(
-    `${API_BASE_URL}/settings`,
+  await requestJson<unknown>(
+    "/settings",
     {
       method: "PUT",
       headers: {
@@ -346,22 +339,204 @@ export async function saveSystemSettings(
       body: JSON.stringify(settings),
     }
   );
+}
 
-  if (!response.ok) {
-    throw new Error("Failed to save system settings.");
+// ======================================================
+// SHARED WATER QUALITY THRESHOLD CONFIGURATION
+// ======================================================
+
+// These defaults are used only when no saved settings
+// exist. A failed settings request must not silently
+// fall back to defaults.
+
+export type WaterQualityParameter =
+  | "temperature"
+  | "ph_level"
+  | "dissolved_oxygen"
+  | "turbidity"
+  | "water_level";
+
+export type WaterQualityRange = {
+  min: number;
+  max: number | null;
+  unit: string;
+};
+
+export type WaterQualityRanges = Record<
+  WaterQualityParameter,
+  WaterQualityRange
+>;
+
+export type WaterQualityStatus =
+  | "Normal"
+  | "Warning"
+  | "No Data";
+
+export const DEFAULT_WATER_QUALITY_RANGES: WaterQualityRanges = {
+  temperature: {
+    min: 25,
+    max: 30,
+    unit: "°C",
+  },
+  ph_level: {
+    min: 6.5,
+    max: 8.5,
+    unit: "pH",
+  },
+  dissolved_oxygen: {
+    min: 5,
+    max: null,
+    unit: "mg/L",
+  },
+  turbidity: {
+    min: 0,
+    max: 5,
+    unit: "NTU",
+  },
+  water_level: {
+    min: 70,
+    max: 100,
+    unit: "%",
+  },
+};
+
+function parseSettingNumber(
+  value: string,
+  fallback: number
+): number {
+  if (value.trim() === "") {
+    return fallback;
   }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : fallback;
+}
+
+export function getWaterQualityRanges(
+  settings: SystemSettingsRecord | null
+): WaterQualityRanges {
+  if (!settings) {
+    return DEFAULT_WATER_QUALITY_RANGES;
+  }
+
+  return {
+    temperature: {
+      min: parseSettingNumber(
+        settings.temperature_min,
+        25
+      ),
+      max: parseSettingNumber(
+        settings.temperature_max,
+        30
+      ),
+      unit: "°C",
+    },
+
+    ph_level: {
+      min: parseSettingNumber(
+        settings.ph_min,
+        6.5
+      ),
+      max: parseSettingNumber(
+        settings.ph_max,
+        8.5
+      ),
+      unit: "pH",
+    },
+
+    dissolved_oxygen: {
+      min: parseSettingNumber(
+        settings.dissolved_oxygen_min,
+        5
+      ),
+      max: null,
+      unit: "mg/L",
+    },
+
+    turbidity: {
+      min: 0,
+      max: parseSettingNumber(
+        settings.turbidity_max,
+        5
+      ),
+      unit: "NTU",
+    },
+
+    water_level: {
+      min: parseSettingNumber(
+        settings.water_level_min,
+        70
+      ),
+      max: 100,
+      unit: "%",
+    },
+  };
+}
+
+export function getWaterQualityStatus(
+  value: string | number | null | undefined,
+  range: WaterQualityRange
+): WaterQualityStatus {
+  if (
+    value === null ||
+    value === undefined ||
+    (typeof value === "string" &&
+      value.trim() === "")
+  ) {
+    return "No Data";
+  }
+
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return "No Data";
+  }
+
+  if (numericValue < range.min) {
+    return "Warning";
+  }
+
+  if (
+    range.max !== null &&
+    numericValue > range.max
+  ) {
+    return "Warning";
+  }
+
+  return "Normal";
+}
+
+export function formatWaterQualityRange(
+  range: WaterQualityRange
+): string {
+  if (range.max === null) {
+    return `≥ ${range.min} ${range.unit}`;
+  }
+
+  return `${range.min}–${range.max} ${range.unit}`;
 }
 
 // ======================================================
 // FISH BEHAVIOR
 // ======================================================
 
+export type DetectionSource =
+  | "Manual"
+  | "Prototype"
+  | "Camera Analysis";
+
 export type FishBehaviorRecord = {
   id: number;
+  fish_id: number | null;
+  fish_name: string | null;
+  species: string | null;
   activity_status: "Normal" | "Abnormal";
   behavior_type: string | null;
-  confidence_score: string | null;
   description: string | null;
+  detection_source: DetectionSource;
   detected_at: string;
 };
 
@@ -374,19 +549,183 @@ type FishBehaviorResponse = {
 export async function getFishBehaviorLogs(): Promise<
   FishBehaviorRecord[]
 > {
-  const response = await fetch(
-    `${API_BASE_URL}/fish-behavior`,
-    {
-      cache: "no-store",
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch fish behavior logs.");
-  }
-
-  const result: FishBehaviorResponse =
-    await response.json();
+  const result =
+    await requestJson<FishBehaviorResponse>(
+      "/fish-behavior",
+      { cache: "no-store" }
+    );
 
   return result.data;
 }
+
+// ======================================================
+// FISH APPEARANCE
+// ======================================================
+
+export type FishAppearanceRecord = {
+  id: number;
+  fish_id: number | null;
+  fish_name: string | null;
+  species: string | null;
+  appearance_status:
+    | "Normal"
+    | "Possible Abnormality";
+  abnormality_type: string | null;
+  description: string | null;
+  detection_source: DetectionSource;
+  detected_at: string;
+};
+
+type FishAppearanceResponse = {
+  success: boolean;
+  count: number;
+  data: FishAppearanceRecord[];
+};
+
+export async function getFishAppearanceLogs(): Promise<
+  FishAppearanceRecord[]
+> {
+  const result =
+    await requestJson<FishAppearanceResponse>(
+      "/fish-appearance",
+      { cache: "no-store" }
+    );
+
+  return result.data;
+}
+
+// ======================================================
+// FISH PROFILES
+// ======================================================
+
+export type FishProfileRecord = {
+  id: number;
+  fish_name: string;
+  species: string;
+  description: string | null;
+  created_at: string;
+};
+
+type FishProfilesResponse = {
+  success: boolean;
+  count: number;
+  data: FishProfileRecord[];
+};
+
+export async function getFishProfiles(): Promise<
+  FishProfileRecord[]
+> {
+  const result =
+    await requestJson<FishProfilesResponse>(
+      "/fish-profiles",
+      { cache: "no-store" }
+    );
+
+  return result.data;
+}
+
+// ======================================================
+// SAVE MANUAL FISH BEHAVIOR OBSERVATION
+// ======================================================
+
+export type ManualFishBehaviorInput = {
+  fish_id: number;
+  activity_status: "Normal" | "Abnormal";
+  behavior_type: string;
+  description: string;
+};
+
+export async function saveManualFishBehavior(
+  observation: ManualFishBehaviorInput
+): Promise<void> {
+  await requestJson<unknown>(
+    "/fish-behavior",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(observation),
+    }
+  );
+}
+
+// ======================================================
+// SAVE MANUAL FISH APPEARANCE OBSERVATION
+// ======================================================
+
+export type ManualFishAppearanceInput = {
+  fish_id: number;
+  appearance_status:
+    | "Normal"
+    | "Possible Abnormality";
+  abnormality_type: string | null;
+  description: string;
+};
+
+export async function saveManualFishAppearance(
+  observation: ManualFishAppearanceInput
+): Promise<void> {
+  await requestJson<unknown>(
+    "/fish-appearance",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(observation),
+    }
+  );
+}
+
+// ======================================================
+// STEP 45.16.3.1
+// AUTOMATIC WATER-CHANGE HISTORY
+// ======================================================
+
+// These types match the existing Express backend API:
+// GET /api/water-change/history
+
+export type WaterChangeCycleStatus =
+  | "Requested"
+  | "Completed"
+  | "Cancelled";
+
+export type WaterChangeHistoryRecord = {
+  id: number;
+  cycle_status: WaterChangeCycleStatus;
+  target_percentage: string;
+  trigger_parameter: string | null;
+  trigger_value: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type WaterChangeHistoryResponse = {
+  success: boolean;
+  count: number;
+  data: WaterChangeHistoryRecord[];
+};
+
+// ======================================================
+// GET AUTOMATIC WATER-CHANGE HISTORY
+// ======================================================
+
+export async function getWaterChangeHistory(): Promise<
+  WaterChangeHistoryRecord[]
+> {
+  const result =
+    await requestJson<WaterChangeHistoryResponse>(
+      "/water-change/history",
+      { cache: "no-store" }
+    );
+
+  return result.data;
+}
+
+// ======================================================
+// END OF AUTOMATIC WATER-CHANGE HISTORY API
+// ======================================================

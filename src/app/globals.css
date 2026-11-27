@@ -24,3 +24,12 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+/* Hide sidebar scrollbar while keeping scrolling enabled */
+.sidebar-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Older Microsoft browsers */
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  display: none; /* Chrome, Edge, Safari */
+}

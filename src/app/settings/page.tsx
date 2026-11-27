@@ -54,6 +54,95 @@ const defaultNotifications: Notifications = {
   fishBehavior: true,
 };
 
+
+function ThresholdInput({
+  label,
+  value,
+  onChange,
+  unit,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  unit: string;
+  disabled: boolean;
+}) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-medium text-slate-700">
+        {label}
+      </label>
+
+      <div className="flex items-center gap-3">
+        <input
+          type="number"
+          step="any"
+          value={value}
+          disabled={disabled}
+          onChange={(event) =>
+            onChange(event.target.value)
+          }
+          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+        />
+
+        <span className="min-w-12 text-sm text-slate-500">
+          {unit}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function Toggle({
+  label,
+  description,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-4 last:border-b-0">
+      <div>
+        <p className="text-sm font-medium text-slate-800">
+          {label}
+        </p>
+
+        <p className="mt-1 text-xs leading-5 text-slate-500">
+          {description}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+          checked ? "bg-cyan-600" : "bg-slate-300"
+        }`}
+      >
+        <span
+          className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${
+            checked
+              ? "translate-x-6"
+              : "translate-x-1"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+
 export default function SettingsPage() {
   const [thresholds, setThresholds] =
     useState<Thresholds>(defaultThresholds);
@@ -310,89 +399,6 @@ export default function SettingsPage() {
     }
   }
 
-  function ThresholdInput({
-    label,
-    value,
-    onChange,
-    unit,
-  }: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    unit: string;
-  }) {
-    return (
-      <div>
-        <label className="mb-2 block text-sm font-medium text-slate-700">
-          {label}
-        </label>
-
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            step="any"
-            value={value}
-            disabled={isLoading || isSaving}
-            onChange={(event) =>
-              onChange(event.target.value)
-            }
-            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-          />
-
-          <span className="min-w-12 text-sm text-slate-500">
-            {unit}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  function Toggle({
-    label,
-    description,
-    checked,
-    onChange,
-  }: {
-    label: string;
-    description: string;
-    checked: boolean;
-    onChange: (checked: boolean) => void;
-  }) {
-    return (
-      <div className="flex items-center justify-between gap-4 border-b border-slate-100 py-4 last:border-b-0">
-        <div>
-          <p className="text-sm font-medium text-slate-800">
-            {label}
-          </p>
-
-          <p className="mt-1 text-xs leading-5 text-slate-500">
-            {description}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          aria-label={label}
-          disabled={isLoading || isSaving}
-          onClick={() => onChange(!checked)}
-          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-            checked ? "bg-cyan-600" : "bg-slate-300"
-          }`}
-        >
-          <span
-            className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${
-              checked
-                ? "translate-x-6"
-                : "translate-x-1"
-            }`}
-          />
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
@@ -478,6 +484,7 @@ export default function SettingsPage() {
 
                 <div className="space-y-4">
                   <ThresholdInput
+                    disabled={isLoading || isSaving}
                     label="Minimum temperature"
                     value={thresholds.temperatureMin}
                     unit="°C"
@@ -490,6 +497,7 @@ export default function SettingsPage() {
                   />
 
                   <ThresholdInput
+                    disabled={isLoading || isSaving}
                     label="Maximum temperature"
                     value={thresholds.temperatureMax}
                     unit="°C"
@@ -517,6 +525,7 @@ export default function SettingsPage() {
 
                 <div className="space-y-4">
                   <ThresholdInput
+                    disabled={isLoading || isSaving}
                     label="Minimum pH"
                     value={thresholds.phMin}
                     unit="pH"
@@ -526,6 +535,7 @@ export default function SettingsPage() {
                   />
 
                   <ThresholdInput
+                    disabled={isLoading || isSaving}
                     label="Maximum pH"
                     value={thresholds.phMax}
                     unit="pH"
@@ -549,6 +559,7 @@ export default function SettingsPage() {
                 </div>
 
                 <ThresholdInput
+                  disabled={isLoading || isSaving}
                   label="Minimum dissolved oxygen"
                   value={thresholds.oxygenMin}
                   unit="mg/L"
@@ -574,6 +585,7 @@ export default function SettingsPage() {
                 </div>
 
                 <ThresholdInput
+                  disabled={isLoading || isSaving}
                   label="Maximum turbidity"
                   value={thresholds.turbidityMax}
                   unit="NTU"
@@ -599,6 +611,7 @@ export default function SettingsPage() {
                 </div>
 
                 <ThresholdInput
+                  disabled={isLoading || isSaving}
                   label="Minimum water level"
                   value={thresholds.waterLevelMin}
                   unit="%"
@@ -642,6 +655,7 @@ export default function SettingsPage() {
 
             <div className="mt-4">
               <Toggle
+                disabled={isLoading || isSaving}
                 label="Critical water quality alerts"
                 description="For potentially dangerous readings, such as critically low dissolved oxygen."
                 checked={notifications.critical}
@@ -654,6 +668,7 @@ export default function SettingsPage() {
               />
 
               <Toggle
+                disabled={isLoading || isSaving}
                 label="Water quality warnings"
                 description="For readings outside the configured acceptable ranges."
                 checked={notifications.warning}
@@ -666,6 +681,7 @@ export default function SettingsPage() {
               />
 
               <Toggle
+                disabled={isLoading || isSaving}
                 label="Equipment notifications"
                 description="For equipment status changes and connection problems."
                 checked={notifications.equipment}
@@ -678,6 +694,7 @@ export default function SettingsPage() {
               />
 
               <Toggle
+                disabled={isLoading || isSaving}
                 label="Fish behavior alerts"
                 description="For abnormal activity identified by the camera analysis system."
                 checked={notifications.fishBehavior}
@@ -712,6 +729,7 @@ export default function SettingsPage() {
 
             <div className="mt-4">
               <Toggle
+                disabled={isLoading || isSaving}
                 label="Automatic aeration"
                 description="Store whether future automatic aeration should be allowed when configured oxygen conditions require it."
                 checked={autoAeration}
@@ -722,6 +740,7 @@ export default function SettingsPage() {
               />
 
               <Toggle
+                disabled={isLoading || isSaving}
                 label="Automatic partial water change"
                 description="Store whether the future controller may manage a configured 10–25% partial water change."
                 checked={autoWaterChange}

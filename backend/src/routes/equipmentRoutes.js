@@ -118,4 +118,47 @@ router.post("/logs", async (req, res) => {
   }
 });
 
+// ====================================================
+// GET AUTOMATIC AERATION STATE - PROTOTYPE
+// ====================================================
+
+router.get("/automatic-aeration", async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT
+         id,
+         equipment_name,
+         requested_state,
+         last_reading_value
+       FROM automatic_aeration_state
+       WHERE equipment_name = ?
+       LIMIT 1`,
+      ["Aeration System"]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Automatic aeration state not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: rows[0],
+      simulation_only: true,
+    });
+  } catch (error) {
+    console.error(
+      "Automatic aeration state GET error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve automatic aeration state.",
+    });
+  }
+});
+
 module.exports = router;
