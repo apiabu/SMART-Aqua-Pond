@@ -1,10 +1,11 @@
+
 -- ============================================================
 -- SMART Aqua Pond
 -- MySQL Database Schema
+-- Improved Schema Organization
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS smart_aqua_pond;
-
 USE smart_aqua_pond;
 
 -- ============================================================
@@ -18,7 +19,9 @@ CREATE TABLE IF NOT EXISTS water_quality_readings (
     tds_ppm DECIMAL(8,2) NULL,
     turbidity DECIMAL(7,2) NULL,
     water_level DECIMAL(5,2) NULL,
-    recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_water_quality_recorded_at (recorded_at)
 );
 
 -- ============================================================
@@ -32,7 +35,10 @@ CREATE TABLE IF NOT EXISTS alerts (
     severity ENUM('Critical', 'Warning', 'Info') NOT NULL,
     category VARCHAR(50) NOT NULL,
     acknowledged BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_alerts_created_at (created_at),
+    INDEX idx_alerts_acknowledged_created (acknowledged, created_at)
 );
 
 -- ============================================================
@@ -47,7 +53,12 @@ CREATE TABLE IF NOT EXISTS feeding_schedules (
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    INDEX idx_feeding_schedules_enabled_time (enabled, feeding_time),
+
+    CONSTRAINT chk_feeding_schedules_amount
+        CHECK (amount IS NULL OR amount >= 0)
 );
 
 -- ============================================================
@@ -62,10 +73,16 @@ CREATE TABLE IF NOT EXISTS feeding_history (
     amount DECIMAL(7,2) NULL,
     fed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
+    INDEX idx_feeding_history_schedule_fed_at
+        (feeding_schedule_id, fed_at),
+
     CONSTRAINT fk_feeding_history_schedule
         FOREIGN KEY (feeding_schedule_id)
         REFERENCES feeding_schedules(id)
-        ON DELETE SET NULL
+        ON DELETE SET NULL,
+
+    CONSTRAINT chk_feeding_history_amount
+        CHECK (amount IS NULL OR amount >= 0)
 );
 
 -- ============================================================
@@ -79,7 +96,9 @@ CREATE TABLE IF NOT EXISTS equipment_logs (
     control_mode ENUM('Automatic', 'Manual') NOT NULL,
     status ENUM('Success', 'Failed') NOT NULL DEFAULT 'Success',
     details TEXT NULL,
-    recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_equipment_logs_recorded_at (recorded_at)
 );
 
 -- ============================================================
@@ -120,7 +139,22 @@ CREATE TABLE IF NOT EXISTS system_settings (
     auto_water_change_enabled BOOLEAN NOT NULL DEFAULT FALSE,
 
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_system_temperature_range
+        CHECK (temperature_min <= temperature_max),
+
+    CONSTRAINT chk_system_ph_range
+        CHECK (ph_min <= ph_max),
+
+    CONSTRAINT chk_system_dissolved_oxygen
+        CHECK (dissolved_oxygen_min >= 0),
+
+    CONSTRAINT chk_system_turbidity
+        CHECK (turbidity_max >= 0),
+
+    CONSTRAINT chk_system_water_level
+        CHECK (water_level_min >= 0)
 );
 
 -- ============================================================
@@ -206,6 +240,7 @@ CREATE TABLE IF NOT EXISTS fish_behavior_logs (
     behavior_type VARCHAR(100) NULL,
     confidence_score DECIMAL(5,2) NULL,
     description TEXT NULL,
+<<<<<<< HEAD
     detection_source ENUM('Manual', 'Prototype', 'Camera Analysis')
         NOT NULL DEFAULT 'Prototype',
     detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -214,6 +249,19 @@ CREATE TABLE IF NOT EXISTS fish_behavior_logs (
         FOREIGN KEY (fish_id)
         REFERENCES fish_profiles(id)
         ON DELETE SET NULL
+=======
+    detected_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    INDEX idx_fish_behavior_detected_at (detected_at),
+    INDEX idx_fish_behavior_status_detected
+        (activity_status, detected_at),
+
+    CONSTRAINT chk_fish_behavior_confidence
+        CHECK (
+            confidence_score IS NULL
+            OR (confidence_score >= 0 AND confidence_score <= 100)
+        )
+>>>>>>> 7b53e14dd2762c388def00b6d368f278938b562a
 );
 
 -- ============================================================
@@ -327,6 +375,7 @@ DEALLOCATE PREPARE schema_upgrade_stmt;
 
 -- ============================================================
 -- DEFAULT SYSTEM SETTINGS
+-- Insert default settings only when no settings record exists.
 -- ============================================================
 
 INSERT INTO system_settings (

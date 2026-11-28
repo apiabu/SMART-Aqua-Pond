@@ -62,7 +62,11 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
+<<<<<<< HEAD
     <aside className="sticky top-0 flex h-screen w-64 shrink-0 self-start flex-col bg-slate-900 p-6 text-white">
+=======
+    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col bg-slate-900 p-6 text-white">
+>>>>>>> 7b53e14dd2762c388def00b6d368f278938b562a
       {/* Logo / System Name */}
       <Link href="/" className="flex items-center gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-600">
@@ -83,7 +87,11 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav
         aria-label="Main navigation"
+<<<<<<< HEAD
         className="sidebar-scroll mt-8 min-h-0 flex-1 space-y-2 overflow-y-auto"
+=======
+        className="mt-8 flex-1 space-y-2 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+>>>>>>> 7b53e14dd2762c388def00b6d368f278938b562a
       >
         {navigationItems.map((item) => {
           const Icon = item.icon;
