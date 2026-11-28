@@ -24,10 +24,10 @@ const PARAMETERS = [
     maxSetting: "ph_max",
   },
   {
-    key: "dissolved_oxygen",
-    label: "Dissolved Oxygen",
-    unit: "mg/L",
-    minSetting: "dissolved_oxygen_min",
+    key: "tds_ppm",
+    label: "TDS",
+    unit: "ppm",
+    maxSetting: "tds_max_ppm",
   },
   {
     key: "turbidity",
@@ -46,8 +46,6 @@ const PARAMETERS = [
 const PARAMETER_KEYS = PARAMETERS.map(
   (parameter) => parameter.key
 );
-
-const AERATION_EQUIPMENT_NAME = "Aeration System";
 
 // ====================================================
 // INPUT VALIDATION
@@ -93,8 +91,8 @@ function validatePhysicalRange(key, value) {
     case "ph_level":
       return value >= 0 && value <= 14;
 
-    case "dissolved_oxygen":
-      return value >= 0 && value <= 100;
+    case "tds_ppm":
+      return value >= 0 && value <= 100000;
 
     case "turbidity":
       return value >= 0 && value <= 100000;
@@ -118,7 +116,8 @@ function isOutsideThreshold(value, parameter, settings) {
       : null;
 
   const max =
-    parameter.maxSetting !== undefined
+    parameter.maxSetting !== undefined &&
+    settings[parameter.maxSetting] !== null
       ? Number(settings[parameter.maxSetting])
       : null;
 
@@ -140,7 +139,8 @@ function describeThreshold(parameter, settings) {
       : null;
 
   const max =
-    parameter.maxSetting !== undefined
+    parameter.maxSetting !== undefined &&
+    settings[parameter.maxSetting] !== null
       ? Number(settings[parameter.maxSetting])
       : null;
 
@@ -160,136 +160,19 @@ function describeThreshold(parameter, settings) {
 }
 
 // ====================================================
-// AUTOMATIC AERATION - PROTOTYPE SIMULATION
+// AUTOMATIC AERATION - DISABLED WITHOUT DO SENSOR
 // ====================================================
 
-async function evaluateAutomaticAeration(
-  connection,
-  dissolvedOxygen,
-  settings
-) {
-  const result = {
-    enabled: Number(settings.auto_aeration_enabled) === 1,
+function getAutomaticAerationStatus() {
+  return {
+    enabled: false,
     evaluated: false,
     action: null,
     requested_state: null,
-    reason: null,
+    reason:
+      "Automatic aeration requires a dissolved oxygen sensor; TDS cannot determine oxygen levels.",
     log_id: null,
   };
-
-  if (dissolvedOxygen === null) {
-    result.reason = "No dissolved oxygen reading provided.";
-    return result;
-  }
-
-  if (!result.enabled) {
-    result.reason =
-      "Automatic aeration is disabled in Settings.";
-    return result;
-  }
-
-  const minimumDO = Number(settings.dissolved_oxygen_min);
-
-  if (!Number.isFinite(minimumDO)) {
-    throw new Error("Invalid dissolved oxygen threshold.");
-  }
-
-  const requiredState =
-    dissolvedOxygen < minimumDO ? "ON" : "OFF";
-
-  await connection.execute(
-    `INSERT INTO automatic_aeration_state
-     (
-       equipment_name,
-       requested_state
-     )
-     VALUES (?, 'OFF')
-     ON DUPLICATE KEY UPDATE
-       equipment_name = equipment_name`,
-    [AERATION_EQUIPMENT_NAME]
-  );
-
-  const [stateRows] = await connection.execute(
-    `SELECT
-       id,
-       requested_state
-     FROM automatic_aeration_state
-     WHERE equipment_name = ?
-     FOR UPDATE`,
-    [AERATION_EQUIPMENT_NAME]
-  );
-
-  if (stateRows.length === 0) {
-    throw new Error("Automatic aeration state not found.");
-  }
-
-  const currentState = stateRows[0];
-
-  result.evaluated = true;
-  result.requested_state = requiredState;
-
-  // Avoid duplicate requests.
-  if (currentState.requested_state === requiredState) {
-    await connection.execute(
-      `UPDATE automatic_aeration_state
-       SET last_reading_value = ?
-       WHERE id = ?`,
-      [dissolvedOxygen, currentState.id]
-    );
-
-    result.reason =
-      `Requested aeration state is already ${requiredState}.`;
-
-    return result;
-  }
-
-  const details =
-    requiredState === "ON"
-      ? `Prototype automatic aeration ON request. ` +
-        `Dissolved oxygen: ${dissolvedOxygen} mg/L, ` +
-        `below configured minimum ${minimumDO} mg/L. ` +
-        `Simulation only; no physical hardware command was sent.`
-      : `Prototype automatic aeration OFF request. ` +
-        `Dissolved oxygen: ${dissolvedOxygen} mg/L, ` +
-        `at or above configured minimum ${minimumDO} mg/L. ` +
-        `Simulation only; no physical hardware command was sent.`;
-
-  // Success means successful simulated logging only.
-  const [logResult] = await connection.execute(
-    `INSERT INTO equipment_logs
-     (
-       equipment_name,
-       action,
-       control_mode,
-       status,
-       details
-     )
-     VALUES (?, ?, 'Automatic', 'Success', ?)`,
-    [
-      AERATION_EQUIPMENT_NAME,
-      requiredState,
-      details,
-    ]
-  );
-
-  await connection.execute(
-    `UPDATE automatic_aeration_state
-     SET
-       requested_state = ?,
-       last_reading_value = ?
-     WHERE id = ?`,
-    [
-      requiredState,
-      dissolvedOxygen,
-      currentState.id,
-    ]
-  );
-
-  result.action = requiredState;
-  result.log_id = logResult.insertId;
-  result.reason = details;
-
-  return result;
 }
 
 // ====================================================
@@ -555,7 +438,7 @@ router.get("/", async (req, res) => {
         id,
         temperature,
         ph_level,
-        dissolved_oxygen,
+        tds_ppm,
         turbidity,
         water_level,
         recorded_at
@@ -584,7 +467,7 @@ router.get("/", async (req, res) => {
 
 // ====================================================
 // POST WATER QUALITY READING
-// ALERTS + AERATION + PARTIAL WATER CHANGE
+// ALERTS + DISABLED AERATION STATUS + PARTIAL WATER CHANGE
 // ====================================================
 
 router.post("/", async (req, res) => {
@@ -651,11 +534,10 @@ router.post("/", async (req, res) => {
         temperature_max,
         ph_min,
         ph_max,
-        dissolved_oxygen_min,
+        tds_max_ppm,
         turbidity_max,
         water_level_min,
         warning_alerts_enabled,
-        auto_aeration_enabled,
         auto_water_change_enabled
       FROM system_settings
       ORDER BY id ASC
@@ -681,7 +563,7 @@ router.post("/", async (req, res) => {
        (
          temperature,
          ph_level,
-         dissolved_oxygen,
+         tds_ppm,
          turbidity,
          water_level
        )
@@ -837,11 +719,7 @@ router.post("/", async (req, res) => {
     // ------------------------------------------------
 
     const automaticAeration =
-      await evaluateAutomaticAeration(
-        connection,
-        readings.dissolved_oxygen,
-        settings
-      );
+      getAutomaticAerationStatus();
 
     // ------------------------------------------------
     // AUTOMATIC PARTIAL WATER CHANGE

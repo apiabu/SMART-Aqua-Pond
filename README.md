@@ -17,7 +17,7 @@ The SMART Aqua Pond project is designed around the following 10 core functions:
 1. **Real-Time Water Quality Monitoring**
    - Temperature
    - pH level
-   - Dissolved oxygen
+   - Total dissolved solids (TDS)
    - Turbidity
    - Water level
 
@@ -80,7 +80,7 @@ The SMART Aqua Pond project is designed around the following 10 core functions:
 - ESP32-CAM
 - pH sensor
 - DS18B20 waterproof temperature sensor
-- Dissolved oxygen sensor
+- TDS sensor
 - Turbidity sensor
 - Water-level sensors
 - Relay module
@@ -177,6 +177,10 @@ Water-quality values currently displayed by the application are **prototype/test
 Equipment controls currently demonstrate the software control flow and MySQL activity logging. They do **not yet activate physical pumps, aerators, valves, or feeders**.
 
 Fish-behavior records are also prototype/database data. Live AI-based fish behavior analysis has not yet been integrated.
+
+TDS is monitored in ppm, but its alert limit is intentionally unconfigured until a
+pond-specific value is set. TDS does not measure dissolved oxygen, so automatic
+aeration is unavailable unless a separate dissolved-oxygen sensor is installed.
 
 ---
 
@@ -305,18 +309,33 @@ feeding_schedules
 feeding_history
 equipment_logs
 system_settings
+fish_profiles
 fish_behavior_logs
+fish_appearance_logs
+water_quality_alert_states
+automatic_aeration_state
+automatic_water_change_history
+automatic_water_change_state
 ```
 
 The database stores monitoring records and prototype system activity used by the dashboard.
 
-`database/schema.sql` creates the existing tables and adds synthetic sample
+`database/schema.sql` creates the tables and adds synthetic sample
 records for development. It includes 24 hourly simulated water-quality readings
-and five prototype records in each other operational table. The sample inserts
+and prototype records for the dashboard's operational tables. The sample inserts
 are safe to rerun without duplicating their fixed timestamps / feeding times.
-Sensor values are simulated calibrated outputs (temperature in C, dissolved
-oxygen in mg/L, turbidity in NTU, and water level as a percentage); they are not
-live Arduino measurements.
+Sensor values are simulated calibrated outputs (temperature in C, TDS in ppm,
+turbidity in NTU, and water level as a percentage); they are not live Arduino
+measurements. The TDS alert limit starts unset; configure a limit appropriate
+for the pond before using TDS alerts.
+
+For an existing database, run
+`database/migrations/20261128_add_tds_sensor.sql` once if it has not already
+been applied, followed by
+`database/migrations/20261128_complete_application_schema.sql`. The latter
+adds database tables and columns required by the current API. Existing
+dissolved-oxygen records are retained in the legacy database column and are
+not converted to TDS.
 
 ---
 
@@ -326,6 +345,7 @@ live Arduino measurements.
 - Relay modules or suitable driver circuits and external power supplies must be used.
 - Water-exposed electrical components should be properly insulated and protected.
 - Hardware automation should include appropriate safety and failure handling.
+- TDS does not measure dissolved oxygen. Install a separate DO sensor before enabling oxygen-based aeration automation, and choose a TDS probe and limit suited to the pond's water type.
 - Ammonia, nitrite, and nitrate should be measured using manual test kits unless suitable electronic probes are actually installed.
 - Fish-behavior analysis should be treated as an indicator of possible abnormal behavior or stress, not as a medical diagnosis.
 
@@ -349,7 +369,7 @@ live Arduino measurements.
 ### Phase 2 — Hardware Integration
 
 - Arduino Mega 2560
-- Water-quality sensors
+- Temperature, pH, TDS, turbidity, and water-level sensors
 - Aeration control
 - Water pump
 - Solenoid valves

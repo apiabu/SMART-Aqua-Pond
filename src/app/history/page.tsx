@@ -70,7 +70,7 @@ const parameterOptions = [
   "All Parameters",
   "Water Temperature",
   "pH Level",
-  "Dissolved Oxygen",
+  "Total Dissolved Solids (TDS)",
   "Turbidity",
   "Water Level",
 ];
@@ -81,7 +81,7 @@ const parameterDefinitions: {
 }[] = [
   { key: "temperature", title: "Water Temperature" },
   { key: "ph_level", title: "pH Level" },
-  { key: "dissolved_oxygen", title: "Dissolved Oxygen" },
+  { key: "tds_ppm", title: "Total Dissolved Solids (TDS)" },
   { key: "turbidity", title: "Turbidity" },
   { key: "water_level", title: "Water Level" },
 ];
@@ -223,7 +223,7 @@ function convertReadingToHistoryRecords(
         ({
           temperature: "°C",
           ph_level: "pH",
-          dissolved_oxygen: "mg/L",
+          tds_ppm: "ppm",
           turbidity: "NTU",
           water_level: "%",
         }[definition.key]),
@@ -690,9 +690,9 @@ export default function HistoryPage() {
       record.parameter === "Water Temperature"
   );
 
-  const latestDissolvedOxygen = records.find(
+  const latestTds = records.find(
     (record) =>
-      record.parameter === "Dissolved Oxygen"
+      record.parameter === "Total Dissolved Solids (TDS)"
   );
 
   const latestWaterLevel = records.find(
@@ -955,13 +955,13 @@ export default function HistoryPage() {
             />
 
             <SummaryCard
-              title="Dissolved Oxygen"
+              title="Total Dissolved Solids (TDS)"
               value={
                 loading
                   ? "--"
-                  : latestDissolvedOxygen?.value ?? "--"
+                  : latestTds?.value ?? "--"
               }
-              unit="mg/L"
+              unit="ppm"
               subtitle="Latest database reading"
               icon={Activity}
               iconClassName="text-emerald-600"

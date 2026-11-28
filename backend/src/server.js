@@ -2,8 +2,11 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const path = require("path");
 
-dotenv.config();
+dotenv.config({
+  path: path.resolve(__dirname, "../.env"),
+});
 
 const waterQualityRoutes = require("./routes/waterQualityRoutes");
 const waterChangeRoutes = require("./routes/waterChangeRoutes");
@@ -14,6 +17,11 @@ const settingsRoutes = require("./routes/settingsRoutes");
 const fishBehaviorRoutes = require("./routes/fishBehaviorRoutes");
 const fishAppearanceRoutes = require("./routes/fishAppearanceRoutes");
 const fishProfileRoutes = require("./routes/fishProfileRoutes");
+const hardwareRoutes = require("./routes/hardwareRoutes");
+const {
+  startArduinoSerialBridge,
+  stopArduinoSerialBridge,
+} = require("./services/arduinoSerialService");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -66,13 +74,26 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/fish-behavior", fishBehaviorRoutes);
 app.use("/api/fish-appearance", fishAppearanceRoutes);
 app.use("/api/fish-profiles", fishProfileRoutes);
+app.use("/api/hardware", hardwareRoutes);
 
 // ====================================================
 // START SERVER
 // ====================================================
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(
     `SMART Aqua Pond API running on http://localhost:${PORT}`
   );
+
+  startArduinoSerialBridge({ backendPort: PORT });
 });
+
+function shutdown() {
+  stopArduinoSerialBridge();
+  server.close(() => {
+    process.exit(0);
+  });
+}
+
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);

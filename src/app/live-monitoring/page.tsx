@@ -181,9 +181,9 @@ export default async function LiveMonitoringPage() {
       range: ranges?.ph_level ?? null,
     },
     {
-      title: "Dissolved Oxygen",
-      value: latestReading?.dissolved_oxygen,
-      range: ranges?.dissolved_oxygen ?? null,
+      title: "Total Dissolved Solids (TDS)",
+      value: latestReading?.tds_ppm,
+      range: ranges?.tds_ppm ?? null,
     },
     {
       title: "Turbidity",
@@ -217,12 +217,17 @@ export default async function LiveMonitoringPage() {
   const hasMissingData =
     parameterStatuses.includes("No Data");
 
+  const hasUnconfiguredThreshold =
+    parameterStatuses.includes("Unconfigured");
+
   const overallStatus: WaterQualityStatus =
     hasWarning
       ? "Warning"
       : hasMissingData
         ? "No Data"
-        : "Normal";
+        : hasUnconfiguredThreshold
+          ? "Unconfigured"
+          : "Normal";
 
   const dataUnavailable =
     readingsError || settingsError;
@@ -288,7 +293,9 @@ export default async function LiveMonitoringPage() {
                       ? "Within Configured Ranges"
                       : overallStatus === "Warning"
                         ? "Parameter Warning"
-                        : "Insufficient Data"}
+                        : overallStatus === "Unconfigured"
+                          ? "Threshold Not Configured"
+                          : "Insufficient Data"}
                 </h2>
               </div>
 

@@ -31,7 +31,7 @@ export type WaterQualityReading = {
   id: number;
   temperature: string | null;
   ph_level: string | null;
-  dissolved_oxygen: string | null;
+  tds_ppm: string | null;
   turbidity: string | null;
   water_level: string | null;
   recorded_at: string;
@@ -228,6 +228,31 @@ export async function getEquipmentLogs(): Promise<
   return result.data;
 }
 
+export type ArduinoHardwareStatus = {
+  configured: boolean;
+  connected: boolean;
+  online: boolean;
+  port: string | null;
+  baudRate: number;
+  lastMessageAt: string | null;
+  lastTelemetryAt: string | null;
+  device: string | null;
+  firmwareVersion: string | null;
+  lastError: string | null;
+  mode: "telemetry-only";
+};
+
+export async function getArduinoHardwareStatus(): Promise<
+  ArduinoHardwareStatus
+> {
+  const result = await requestJson<{
+    success: boolean;
+    data: ArduinoHardwareStatus;
+  }>("/hardware/status");
+
+  return result.data;
+}
+
 export async function saveEquipmentLog(
   log: EquipmentLogInput
 ): Promise<void> {
@@ -281,7 +306,7 @@ export type SystemSettingsRecord = {
   temperature_max: string;
   ph_min: string;
   ph_max: string;
-  dissolved_oxygen_min: string;
+  tds_max_ppm: string | null;
   turbidity_max: string;
   water_level_min: string;
   critical_alerts_enabled: boolean;
@@ -298,7 +323,7 @@ export type SystemSettingsInput = {
   temperature_max: number;
   ph_min: number;
   ph_max: number;
-  dissolved_oxygen_min: number;
+  tds_max_ppm: number | null;
   turbidity_max: number;
   water_level_min: number;
   critical_alerts_enabled: boolean;
@@ -352,7 +377,7 @@ export async function saveSystemSettings(
 export type WaterQualityParameter =
   | "temperature"
   | "ph_level"
-  | "dissolved_oxygen"
+  | "tds_ppm"
   | "turbidity"
   | "water_level";
 
@@ -360,6 +385,7 @@ export type WaterQualityRange = {
   min: number;
   max: number | null;
   unit: string;
+  configured?: boolean;
 };
 
 export type WaterQualityRanges = Record<
@@ -370,7 +396,8 @@ export type WaterQualityRanges = Record<
 export type WaterQualityStatus =
   | "Normal"
   | "Warning"
-  | "No Data";
+  | "No Data"
+  | "Unconfigured";
 
 export const DEFAULT_WATER_QUALITY_RANGES: WaterQualityRanges = {
   temperature: {
@@ -383,10 +410,11 @@ export const DEFAULT_WATER_QUALITY_RANGES: WaterQualityRanges = {
     max: 8.5,
     unit: "pH",
   },
-  dissolved_oxygen: {
-    min: 5,
+  tds_ppm: {
+    min: 0,
     max: null,
-    unit: "mg/L",
+    unit: "ppm",
+    configured: false,
   },
   turbidity: {
     min: 0,
@@ -415,12 +443,28 @@ function parseSettingNumber(
     : fallback;
 }
 
+function parseOptionalSetting(
+  value: string | null
+): number | null {
+  if (value === null || value.trim() === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function getWaterQualityRanges(
   settings: SystemSettingsRecord | null
 ): WaterQualityRanges {
   if (!settings) {
     return DEFAULT_WATER_QUALITY_RANGES;
   }
+
+  const tdsMax = parseOptionalSetting(
+    settings.tds_max_ppm
+  );
 
   return {
     temperature: {
@@ -447,13 +491,11 @@ export function getWaterQualityRanges(
       unit: "pH",
     },
 
-    dissolved_oxygen: {
-      min: parseSettingNumber(
-        settings.dissolved_oxygen_min,
-        5
-      ),
-      max: null,
-      unit: "mg/L",
+    tds_ppm: {
+      min: 0,
+      max: tdsMax,
+      unit: "ppm",
+      configured: tdsMax !== null,
     },
 
     turbidity: {
@@ -495,6 +537,10 @@ export function getWaterQualityStatus(
     return "No Data";
   }
 
+  if (range.configured === false) {
+    return "Unconfigured";
+  }
+
   if (numericValue < range.min) {
     return "Warning";
   }
@@ -512,6 +558,10 @@ export function getWaterQualityStatus(
 export function formatWaterQualityRange(
   range: WaterQualityRange
 ): string {
+  if (range.configured === false) {
+    return "Limit not configured";
+  }
+
   if (range.max === null) {
     return `≥ ${range.min} ${range.unit}`;
   }

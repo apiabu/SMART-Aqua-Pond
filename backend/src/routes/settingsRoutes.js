@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
         temperature_max,
         ph_min,
         ph_max,
-        dissolved_oxygen_min,
+        tds_max_ppm,
         turbidity_max,
         water_level_min,
         critical_alerts_enabled,
@@ -53,7 +53,7 @@ router.put("/", async (req, res) => {
       temperature_max,
       ph_min,
       ph_max,
-      dissolved_oxygen_min,
+      tds_max_ppm,
       turbidity_max,
       water_level_min,
       critical_alerts_enabled,
@@ -69,7 +69,6 @@ router.put("/", async (req, res) => {
       temperature_max,
       ph_min,
       ph_max,
-      dissolved_oxygen_min,
       turbidity_max,
       water_level_min,
     ];
@@ -80,11 +79,17 @@ router.put("/", async (req, res) => {
           value === undefined ||
           value === null ||
           !Number.isFinite(Number(value))
-      )
+      ) ||
+      tds_max_ppm === undefined ||
+      (tds_max_ppm !== null &&
+        (!Number.isFinite(Number(tds_max_ppm)) ||
+          Number(tds_max_ppm) < 0 ||
+          Number(tds_max_ppm) > 100000))
     ) {
       return res.status(400).json({
         success: false,
-        message: "All water-quality threshold values are required.",
+        message:
+          "Water-quality thresholds must be valid numbers; the TDS limit may be null or between 0 and 100000 ppm.",
       });
     }
 
@@ -124,6 +129,14 @@ router.put("/", async (req, res) => {
       });
     }
 
+    if (auto_aeration_enabled) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Automatic aeration requires a dissolved oxygen sensor; TDS cannot be used to control it.",
+      });
+    }
+
     const [settings] = await pool.query(`
       SELECT id
       FROM system_settings
@@ -147,7 +160,7 @@ router.put("/", async (req, res) => {
          temperature_max = ?,
          ph_min = ?,
          ph_max = ?,
-         dissolved_oxygen_min = ?,
+         tds_max_ppm = ?,
          turbidity_max = ?,
          water_level_min = ?,
          critical_alerts_enabled = ?,
@@ -162,7 +175,9 @@ router.put("/", async (req, res) => {
         Number(temperature_max),
         Number(ph_min),
         Number(ph_max),
-        Number(dissolved_oxygen_min),
+        tds_max_ppm === null
+          ? null
+          : Number(tds_max_ppm),
         Number(turbidity_max),
         Number(water_level_min),
         critical_alerts_enabled,

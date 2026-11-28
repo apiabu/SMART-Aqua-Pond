@@ -25,7 +25,7 @@ type Thresholds = {
   temperatureMax: string;
   phMin: string;
   phMax: string;
-  oxygenMin: string;
+  tdsMax: string;
   turbidityMax: string;
   waterLevelMin: string;
 };
@@ -42,7 +42,7 @@ const defaultThresholds: Thresholds = {
   temperatureMax: "30",
   phMin: "6.5",
   phMax: "8.5",
-  oxygenMin: "5",
+  tdsMax: "",
   turbidityMax: "5",
   waterLevelMin: "70",
 };
@@ -83,7 +83,7 @@ function ThresholdInput({
           onChange={(event) =>
             onChange(event.target.value)
           }
-          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-black outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:bg-slate-100"
         />
 
         <span className="min-w-12 text-sm text-slate-500">
@@ -174,7 +174,10 @@ export default function SettingsPage() {
           temperatureMax: String(settings.temperature_max),
           phMin: String(settings.ph_min),
           phMax: String(settings.ph_max),
-          oxygenMin: String(settings.dissolved_oxygen_min),
+          tdsMax:
+            settings.tds_max_ppm === null
+              ? ""
+              : String(settings.tds_max_ppm),
           turbidityMax: String(settings.turbidity_max),
           waterLevelMin: String(settings.water_level_min),
         });
@@ -188,9 +191,7 @@ export default function SettingsPage() {
           ),
         });
 
-        setAutoAeration(
-          Boolean(settings.auto_aeration_enabled)
-        );
+        setAutoAeration(false);
 
         setAutoWaterChange(
           Boolean(settings.auto_water_change_enabled)
@@ -237,18 +238,40 @@ export default function SettingsPage() {
   }
 
   function validateThresholds() {
-    const numericValues = Object.values(thresholds).map(Number);
+    const numericValues = [
+      thresholds.temperatureMin,
+      thresholds.temperatureMax,
+      thresholds.phMin,
+      thresholds.phMax,
+      thresholds.turbidityMax,
+      thresholds.waterLevelMin,
+    ].map(Number);
+    const tdsMax =
+      thresholds.tdsMax.trim() === ""
+        ? null
+        : Number(thresholds.tdsMax);
 
     if (
-      Object.values(thresholds).some(
-        (value) => value.trim() === ""
-      ) ||
       numericValues.some(
         (value) => !Number.isFinite(value)
-      )
+      ) ||
+      [
+        thresholds.temperatureMin,
+        thresholds.temperatureMax,
+        thresholds.phMin,
+        thresholds.phMax,
+        thresholds.turbidityMax,
+        thresholds.waterLevelMin,
+      ].some(
+        (value) => value.trim() === ""
+      ) ||
+      (tdsMax !== null &&
+        (!Number.isFinite(tdsMax) ||
+          tdsMax < 0 ||
+          tdsMax > 100000))
     ) {
       setMessage(
-        "Please enter valid numeric threshold values."
+        "Enter valid numeric thresholds; the optional TDS limit must be between 0 and 100000 ppm."
       );
 
       return false;
@@ -259,7 +282,6 @@ export default function SettingsPage() {
         Number(thresholds.temperatureMax) ||
       Number(thresholds.phMin) >=
         Number(thresholds.phMax) ||
-      Number(thresholds.oxygenMin) < 0 ||
       Number(thresholds.turbidityMax) < 0 ||
       Number(thresholds.waterLevelMin) < 0 ||
       Number(thresholds.waterLevelMin) > 100 ||
@@ -296,9 +318,10 @@ export default function SettingsPage() {
         ),
         ph_min: Number(thresholds.phMin),
         ph_max: Number(thresholds.phMax),
-        dissolved_oxygen_min: Number(
-          thresholds.oxygenMin
-        ),
+        tds_max_ppm:
+          thresholds.tdsMax.trim() === ""
+            ? null
+            : Number(thresholds.tdsMax),
         turbidity_max: Number(
           thresholds.turbidityMax
         ),
@@ -313,7 +336,7 @@ export default function SettingsPage() {
           notifications.equipment,
         fish_behavior_alerts_enabled:
           notifications.fishBehavior,
-        auto_aeration_enabled: autoAeration,
+        auto_aeration_enabled: false,
         auto_water_change_enabled: autoWaterChange,
       });
 
@@ -356,9 +379,7 @@ export default function SettingsPage() {
         ),
         ph_min: Number(resetThresholds.phMin),
         ph_max: Number(resetThresholds.phMax),
-        dissolved_oxygen_min: Number(
-          resetThresholds.oxygenMin
-        ),
+        tds_max_ppm: null,
         turbidity_max: Number(
           resetThresholds.turbidityMax
         ),
@@ -554,22 +575,26 @@ export default function SettingsPage() {
                   />
 
                   <h3 className="font-semibold text-slate-800">
-                    Dissolved Oxygen
+                    Total Dissolved Solids (TDS)
                   </h3>
                 </div>
 
                 <ThresholdInput
                   disabled={isLoading || isSaving}
-                  label="Minimum dissolved oxygen"
-                  value={thresholds.oxygenMin}
-                  unit="mg/L"
+                  label="Maximum TDS"
+                  value={thresholds.tdsMax}
+                  unit="ppm"
                   onChange={(value) =>
-                    updateThreshold(
-                      "oxygenMin",
-                      value
-                    )
+                    updateThreshold("tdsMax", value)
                   }
                 />
+
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  Leave blank until you set a pond-specific
+                  limit. Without a limit, TDS readings are
+                  shown as unconfigured and do not generate
+                  threshold alerts.
+                </p>
               </div>
 
               <div className="rounded-lg bg-slate-50 p-4">
@@ -657,7 +682,7 @@ export default function SettingsPage() {
               <Toggle
                 disabled={isLoading || isSaving}
                 label="Critical water quality alerts"
-                description="For potentially dangerous readings, such as critically low dissolved oxygen."
+                description="For potentially dangerous water-quality readings outside configured limits."
                 checked={notifications.critical}
                 onChange={(checked) =>
                   updateNotification(
@@ -729,9 +754,9 @@ export default function SettingsPage() {
 
             <div className="mt-4">
               <Toggle
-                disabled={isLoading || isSaving}
+                disabled
                 label="Automatic aeration"
-                description="Store whether future automatic aeration should be allowed when configured oxygen conditions require it."
+                description="Unavailable: aeration control requires a dissolved oxygen sensor. TDS cannot measure oxygen."
                 checked={autoAeration}
                 onChange={(checked) => {
                   setAutoAeration(checked);

@@ -296,8 +296,8 @@ const [
       title: "pH Level",
     },
     {
-      key: "dissolved_oxygen",
-      title: "Dissolved Oxygen",
+      key: "tds_ppm",
+      title: "Total Dissolved Solids (TDS)",
     },
     {
       key: "turbidity",
@@ -335,6 +335,10 @@ const [
     (parameter) => parameter.status === "No Data"
   );
 
+  const hasUnconfiguredThreshold = waterParameters.some(
+    (parameter) => parameter.status === "Unconfigured"
+  );
+
   const overallWaterStatus:
     | WaterQualityStatus
     | "Unavailable" =
@@ -344,7 +348,9 @@ const [
         ? "Warning"
         : hasMissingWaterData
           ? "No Data"
-          : "Normal";
+          : hasUnconfiguredThreshold
+            ? "Unconfigured"
+            : "Normal";
 
   const overallWaterStyle = getStatusStyle(
     overallWaterStatus === "Unavailable"
@@ -514,7 +520,9 @@ const [
                     ? "Parameter Warning"
                     : overallWaterStatus === "No Data"
                       ? "Insufficient Data"
-                      : "Data Unavailable"}
+                      : overallWaterStatus === "Unconfigured"
+                        ? "Threshold Not Configured"
+                        : "Data Unavailable"}
               </h3>
 
               <p className="mt-2 text-xs text-slate-500">

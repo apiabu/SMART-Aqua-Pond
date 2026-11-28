@@ -24,6 +24,29 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer utilities {
+  .text-slate-300 {
+    color: var(--color-slate-400);
+  }
+
+  .text-slate-400 {
+    color: var(--color-slate-500);
+  }
+
+  .text-slate-500 {
+    color: var(--color-slate-600);
+  }
+
+  .text-slate-600 {
+    color: var(--color-slate-700);
+  }
+
+  .text-slate-700 {
+    color: var(--color-slate-800);
+  }
+}
+
 /* Hide sidebar scrollbar while keeping scrolling enabled */
 .sidebar-scroll {
   scrollbar-width: none; /* Firefox */
